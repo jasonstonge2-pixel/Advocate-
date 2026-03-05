@@ -78,8 +78,17 @@ class NavigationSystem:
             position = (0.0, 0.0, 0.0)
         self.position = position
 
-    def navigate_to_fixed_position(self, target_position: tuple[float, float, float], plasma_vortex: PlasmaVortex) -> float:
-        """Use plasma vortex to neutralize gravitational fields and navigate."""
+    def navigate_to_fixed_position(
+        self,
+        target_position: tuple[float, float, float],
+        plasma_vortex: PlasmaVortex,
+        available_energy: float | None = None,
+    ) -> float | None:
+        """Use plasma vortex to neutralize gravitational fields and navigate.
+
+        Returns the energy required when the maneuver is feasible. If available energy
+        is supplied and insufficient, returns ``None`` and leaves position unchanged.
+        """
         local_gravity = random.uniform(0.5, 2.0)  # Simulated local gravity (m/s^2)
         adjusted_gravity = plasma_vortex.generate_free_fall(local_gravity)
         print(f"Adjusted gravity after plasma vortex: {adjusted_gravity:.2f} m/s^2.")
@@ -89,6 +98,10 @@ class NavigationSystem:
 
         energy_required = distance * random.uniform(0.5, 1.5)  # Arbitrary energy requirement
         print(f"Energy required for fixed position navigation: {energy_required:.2f} units.")
+
+        if available_energy is not None and energy_required > available_energy:
+            print("Insufficient energy for fixed position navigation. Jump aborted.")
+            return None
 
         self.position = target_position
         return energy_required
@@ -108,7 +121,7 @@ class MiV:
         self.navigation = NavigationSystem()
         self.plasma_vortex = PlasmaVortex(strength=10)
 
-    def simulate_jump_to_mars(self, target_position: tuple[float, float, float]) -> None:
+    def simulate_jump_to_mars(self, target_position: tuple[float, float, float]) -> bool:
         """Simulate the MiV making a space-time jump using the subsystems."""
         print("Starting space-time jump to Mars...")
 
@@ -123,13 +136,22 @@ class MiV:
         print(f"Produced {hydrogen_produced:.2f} units of hydrogen fuel.")
 
         # Step 3: Navigate to the target position (Mars) using plasma vortex and magnetic navigation
-        energy_used = self.navigation.navigate_to_fixed_position(target_position, self.plasma_vortex)
+        energy_used = self.navigation.navigate_to_fixed_position(
+            target_position,
+            self.plasma_vortex,
+            available_energy=self.energy_level,
+        )
+        if energy_used is None:
+            print(f"Energy level remains at: {self.energy_level:.2f}.")
+            return False
+
         self.energy_level -= energy_used
         print(f"Energy level after navigation: {self.energy_level:.2f}.")
 
         # Step 4: Use plasma propulsion to finalize the jump
         self.propulsion.use_plasma("hot")
         print("Space-time jump to Mars completed.")
+        return True
 
 
 def run_simulation() -> None:
